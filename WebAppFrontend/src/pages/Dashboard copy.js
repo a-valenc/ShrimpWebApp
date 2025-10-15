@@ -1,11 +1,9 @@
-import React, { useState, useEffect } from "react";
+import React, { useRef, useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Icon } from "@iconify/react";
 
 const STORAGE_KEY = "shrimp_history_v1";
 
-// This function is no longer directly used for image upload, but keeping it
-// in case it's used for other data storage or future features.
 function saveResultToStorage(result) {
   const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
   all.unshift(result);
@@ -13,37 +11,18 @@ function saveResultToStorage(result) {
 }
 
 export default function Dashboard() {
+  const fileRef = useRef(null);
   const navigate = useNavigate();
   const [dashboardStyle, setDashboardStyle] = useState('modern');
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const [latestResult, setLatestResult] = useState(null);
 
   useEffect(() => {
     // Load saved dashboard style preference
     const savedStyle = localStorage.getItem('shrimpSense_dashboard_style') || 'modern';
     setDashboardStyle(savedStyle);
-
-    // Fetch the latest data for display
-    const allResults = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (allResults.length > 0) {
-      setLatestResult(allResults[allResults.length - 1]); // Get the most recent result
-    }
-
-    const handleStorageChange = () => {
-      const updatedResults = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      if (updatedResults.length > 0) {
-        setLatestResult(updatedResults[updatedResults.length - 1]);
-      } else {
-        setLatestResult(null);
-      }
-    };
-
-    window.addEventListener('localStorageUpdated', handleStorageChange);
-
-    return () => {
-      window.removeEventListener('localStorageUpdated', handleStorageChange);
-    };
   }, []);
+
+  const onPick = () => fileRef.current?.click();
 
   const handleLogout = () => {
     setIsLoggingOut(true);
@@ -70,6 +49,24 @@ export default function Dashboard() {
       try {
         const formData = new FormData();
         formData.append('image', file);
+
+        const storedUser = localStorage.getItem('shrimpSense_user');
+        let ownerId = null;
+        if (storedUser) {
+          try {
+            const user = JSON.parse(storedUser);
+            ownerId = user.id;
+          } catch (e) {
+            console.error("Failed to parse shrimpSense_user from localStorage", e);
+          }
+        }
+
+        if (!ownerId) {
+          alert("You must be logged in to upload images.");
+          return; // Stop the upload process
+        }
+
+        formData.append('ownerId', ownerId);
 
         const res = await fetch('http://localhost:5000/api/uploadimage', {
           method: 'POST',
@@ -181,6 +178,13 @@ export default function Dashboard() {
                   <span>Home</span>
                 </button>
                 <button
+                  onClick={() => navigate('/results')}
+                  className="flex items-center space-x-2 hover:text-shrimp-orange transition-colors"
+                >
+                  <span>📊</span>
+                  <span>Results</span>
+                </button>
+                <button
                   onClick={() => navigate('/dashboard/history')}
                   className="flex items-center space-x-2 hover:text-shrimp-orange transition-colors"
                 >
@@ -236,8 +240,23 @@ export default function Dashboard() {
         className={`mx-auto px-6 text-center ${dashboardStyle === 'simplistic' ? 'max-w-6xl py-12' : 'max-w-5xl py-20'}`}
         aria-labelledby="dashboard-heading"
       >
-        {/* Latest Process Results Section */}
+        {/* Header Section */}
         <div className="mb-12">
+          <div className="relative inline-block mb-6">
+            <img
+              src="/shrimp-logo.gif"
+              alt="ShrimpSense logo"
+              className={`mx-auto w-36 h-36 rounded-full shadow-2xl border-4 ${
+                dashboardStyle === 'simplistic'
+                  ? 'border-gray-200 animate-pulse'
+                  : 'border-white/20 animate-bounce'
+              }`}
+            />
+            {dashboardStyle === 'modern' && (
+              <div className="absolute -top-2 -right-2 w-8 h-8 bg-shrimp-orange rounded-full animate-ping"></div>
+            )}
+          </div>
+
           <h1
             id="dashboard-heading"
             className={`text-5xl md:text-6xl lg:text-7xl font-bold mb-6 tracking-wide ${
@@ -250,69 +269,70 @@ export default function Dashboard() {
             <span className={`block ${
               dashboardStyle === 'modern' ? 'text-shrimp-orange animate-pulse' : 'text-green-600'
             }`}>
-              Latest Process Results
+              Ready to Start?
             </span>
           </h1>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mt-8">
-            {latestResult ? (
-              <>
-                <div className={getCardClasses()}>
-                  <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
-                    📅
-                  </div>
-                  <h3 className={`font-bold text-xl mb-2 ${dashboardStyle === 'modern' ? 'group-hover:text-shrimp-orange' : 'group-hover:text-blue-600'} transition-colors duration-300`}>
-                    Last Processed
-                  </h3>
-                  <p className={getSubTextClasses() + " text-xl font-semibold"}>{new Date(latestResult.timestamp).toLocaleString()}</p>
-                </div>
-                <div className={getCardClasses()}>
-                  <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
-                    🔢
-                  </div>
-                  <h3 className={`font-bold text-xl mb-2 ${dashboardStyle === 'modern' ? 'group-hover:text-shrimp-orange' : 'group-hover:text-blue-600'} transition-colors duration-300`}>
-                    Total PL Count
-                  </h3>
-                  <p className={getSubTextClasses() + " text-2xl font-semibold"}>{latestResult.totalPL}</p>
-                </div>
-                <div className={getCardClasses()}>
-                  <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
-                    ⚖️
-                  </div>
-                  <h3 className={`font-bold text-xl mb-2 ${dashboardStyle === 'modern' ? 'group-hover:text-shrimp-orange' : 'group-hover:text-blue-600'} transition-colors duration-300`}>
-                    Biomass
-                  </h3>
-                  <p className={getSubTextClasses() + " text-2xl font-semibold"}>{latestResult.biomass} kg</p>
-                </div>
-                <div className={getCardClasses()}>
-                  <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
-                    🍚
-                  </div>
-                  <h3 className={`font-bold text-xl mb-2 ${dashboardStyle === 'modern' ? 'group-hover:text-shrimp-orange' : 'group-hover:text-blue-600'} transition-colors duration-300`}>
-                    Feed Recommendation
-                  </h3>
-                  <p className={getSubTextClasses() + " text-2xl font-semibold"}>{latestResult.feedRecommendation} g</p>
-                </div>
-                <div className={getCardClasses()}>
-                  <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
-                    🥩
-                  </div>
-                  <h3 className={`font-bold text-xl mb-2 ${dashboardStyle === 'modern' ? 'group-hover:text-shrimp-orange' : 'group-hover:text-blue-600'} transition-colors duration-300`}>
-                    Protein
-                  </h3>
-                  <p className={getSubTextClasses() + " text-2xl font-semibold"}>{latestResult.breakdown.protein} g</p>
-                </div>
-              </>
-            ) : (
-              <div className="col-span-full bg-white/10 backdrop-blur-sm rounded-xl p-6 border border-white/20 h-auto flex items-center justify-center">
-                <p className="text-white/80 text-xl">No recent data available.</p>
-              </div>
-            )}
-          </div>
+
+          <p className={`text-xl md:text-2xl max-w-2xl mx-auto mb-10 leading-relaxed ${
+            dashboardStyle === 'simplistic' ? 'text-gray-600' : 'text-white/90'
+          }`}>
+            Upload an image of shrimp fry to get
+            <span className={`font-semibold ${
+              dashboardStyle === 'modern' ? 'text-shrimp-orange' : 'text-[#2d8a6b]'
+            }`}>
+              {" "}intelligent analysis
+            </span> and
+            <span className="font-semibold text-gray-800"> expert recommendations</span>
+          </p>
         </div>
+
+        {/* Upload Section */}
+        <div className="mb-16">
+          <button
+            onClick={onPick}
+            className={`group relative inline-flex items-center gap-4 font-bold text-xl px-12 py-6 rounded-full shadow-2xl transition-all duration-500 transform overflow-hidden ${
+              dashboardStyle === 'simplistic'
+                ? 'bg-shrimp-orange hover:bg-orange-600 text-white hover:scale-105'
+                : 'bg-shrimp-orange hover:bg-orange-600 text-white hover:scale-110 hover:shadow-shrimp-orange/50'
+            }`}
+            aria-label="Upload shrimp image for analysis"
+          >
+            {dashboardStyle === 'modern' && (
+              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-700"></div>
+            )}
+            <Icon icon="mdi:camera" width="32" height="32" className="relative z-10" />
+            <span className="relative z-10 text-xl">Upload Shrimp Image</span>
+          </button>
+
+          <p className={`mt-4 text-sm ${
+            dashboardStyle === 'simplistic' ? 'text-gray-500' : 'text-white/70'
+          }`}>
+            Supports JPG, PNG, WebP formats
+          </p>
+        </div>
+
+        {/* Hidden file input */}
+        <input
+          ref={fileRef}
+          type="file"
+          accept="image/*"
+          className="hidden"
+          onChange={onFile}
+        />
 
         {/* Show cards only in Modern mode, navigation handles this in Simplistic mode */}
         {dashboardStyle === 'modern' && (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mt-12">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mt-12">
+            <div className={getCardClasses()}
+                 onClick={() => navigate('/results')}>
+              <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
+                📊
+              </div>
+              <h3 className={`font-bold text-xl mb-3 ${dashboardStyle === 'modern' ? 'group-hover:text-shrimp-orange' : 'group-hover:text-blue-600'} transition-colors duration-300`}>
+                View Results
+              </h3>
+              <p className={getSubTextClasses() + " text-base leading-relaxed"}>Check your latest shrimp analysis results</p>
+            </div>
             <div className={getCardClasses()}
                  onClick={() => navigate('/dashboard/history')}>
               <div className={`text-4xl mb-4 ${dashboardStyle === 'modern' ? 'group-hover:scale-110' : ''} transition-transform duration-300`}>
