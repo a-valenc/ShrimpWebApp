@@ -4,8 +4,24 @@ import { useLocation, useNavigate } from "react-router-dom";
 const STORAGE_KEY = 'shrimp_history_v1';
 
 async function fetchLatestResultFromBackend() {
+  const storedUser = localStorage.getItem('shrimpSense_user');
+  let ownerId = null;
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      ownerId = user.id;
+    } catch (e) {
+      console.error("Failed to parse shrimpSense_user from localStorage", e);
+    }
+  }
+
+  if (!ownerId) {
+    alert("You must be logged in to view results.");
+    return null; // Return null if no ownerId
+  }
+
   try {
-    const res = await fetch('http://localhost:5000/api/results');
+    const res = await fetch(`http://localhost:5000/api/results?ownerId=${ownerId}`);
     if (!res.ok) throw new Error('Network error');
     const data = await res.json();
     if (!data || Object.keys(data).length === 0) return null;
@@ -27,8 +43,24 @@ async function fetchLatestResultFromBackend() {
 }
 
 async function fetchResultById(id) {
+  const storedUser = localStorage.getItem('shrimpSense_user');
+  let ownerId = null;
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      ownerId = user.id;
+    } catch (e) {
+      console.error("Failed to parse shrimpSense_user from localStorage", e);
+    }
+  }
+
+  if (!ownerId) {
+    alert("You must be logged in to view results.");
+    return null; // Return null if no ownerId
+  }
+
   try {
-    const res = await fetch(`http://localhost:5000/api/biomass-records`);
+    const res = await fetch(`http://localhost:5000/api/biomass-records?ownerId=${ownerId}`);
     if (!res.ok) throw new Error('Network error');
     const all = await res.json();
     const match = (all || []).find(r => String(r._id || r.recordId) === String(id));

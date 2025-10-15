@@ -44,13 +44,13 @@ export const processImage = async (req, res) => {
 
         const {count, calculatedBiomassGrams, recommendedFeedGrams, processedImageBase64} = response.data;
         
-        // Save biomass record to database (include generated recordId)
+        // Save biomass record to database (include generated recordId and ownerId)
         const biomassRecord = new BiomassRecord({
             dateTime: new Date(),
             shrimpCount: count,
             biomass: calculatedBiomassGrams,
-            feedMeasurement: recommendedFeedGrams
-            
+            feedMeasurement: recommendedFeedGrams,
+            ownerId: req.body.ownerId // Assuming user ID is passed in the request body
         });
         const savedRecord = await biomassRecord.save();
 
