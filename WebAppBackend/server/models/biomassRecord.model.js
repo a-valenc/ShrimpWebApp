@@ -7,6 +7,7 @@ const biomassRecordSchema = new mongoose.Schema({
   feedMeasurement: Number,
   dateTime: Date,
   recordId: String,
+  ownerId: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
 });
 
 export default mongoose.model('BiomassRecord', biomassRecordSchema);
