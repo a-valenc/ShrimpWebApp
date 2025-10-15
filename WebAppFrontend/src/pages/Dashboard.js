@@ -12,6 +12,47 @@ function saveResultToStorage(result) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
 }
 
+async function fetchHistoryFromBackend() {
+  const storedUser = localStorage.getItem('shrimpSense_user');
+  let ownerId = null;
+  if (storedUser) {
+    try {
+      const user = JSON.parse(storedUser);
+      ownerId = user.id;
+    } catch (e) {
+      console.error("Failed to parse shrimpSense_user from localStorage", e);
+    }
+  }
+
+  if (!ownerId) {
+    alert("You must be logged in to view history.");
+    return []; // Return empty array if no ownerId
+  }
+
+  try {
+    const res = await fetch(`http://localhost:5000/api/biomass-records?ownerId=${ownerId}`);
+    if (!res.ok) throw new Error('Network error');
+    const data = await res.json();
+    // Normalize backend fields to the frontend shape
+    const normalized = (data || []).map(r => ({
+      id: r._id || r.recordId || String(Date.now()),
+      fileName: r.fileName || 'upload',
+      timestamp: r.dateTime || r.created_at || new Date().toISOString(),
+      totalPL: r.shrimpCount || r.totalPL || 0,
+      biomass: r.biomass || 0,
+      feedRecommendation: r.feedMeasurement || r.feed || 0,
+      breakdown: r.breakdown || { protein: ((r.feed || r.feedMeasurement || 0) * 0.55).toFixed(2), filler: ((r.feed || r.feedMeasurement || 0) * 0.45).toFixed(2) },
+      processedImageBase64: r.processedImage || r.processedImageBase64 || null,
+    }));
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(normalized));
+    return normalized;
+  } catch (err) {
+    console.warn('Failed to fetch history from backend, falling back to localStorage', err);
+    const local = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return local;
+  }
+}
+
 export default function Dashboard() {
   const navigate = useNavigate();
   const [dashboardStyle, setDashboardStyle] = useState('modern');
@@ -23,16 +64,22 @@ export default function Dashboard() {
     const savedStyle = localStorage.getItem('shrimpSense_dashboard_style') || 'modern';
     setDashboardStyle(savedStyle);
 
-    // Fetch the latest data for display
-    const allResults = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-    if (allResults.length > 0) {
-      setLatestResult(allResults[allResults.length - 1]); // Get the most recent result
-    }
 
-    const handleStorageChange = () => {
-      const updatedResults = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]");
-      if (updatedResults.length > 0) {
-        setLatestResult(updatedResults[updatedResults.length - 1]);
+    (async () => {
+      const all = await fetchHistoryFromBackend();
+      all.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (all.length > 0) {
+        setLatestResult(all[0]); // Get the most recent result after sorting
+      } else {
+        setLatestResult(null);
+      }
+    })();
+
+    const handleStorageChange = async () => {
+      const all = await fetchHistoryFromBackend();
+      all.sort((a,b) => new Date(b.timestamp) - new Date(a.timestamp));
+      if (all.length > 0) {
+        setLatestResult(all[0]);
       } else {
         setLatestResult(null);
       }

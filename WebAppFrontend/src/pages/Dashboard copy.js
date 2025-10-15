@@ -10,7 +10,7 @@ function saveResultToStorage(result) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
 }
 
-export default function Dashboard() {
+export default function Dashboard_upload() {
   const fileRef = useRef(null);
   const navigate = useNavigate();
   const [dashboardStyle, setDashboardStyle] = useState('modern');
