@@ -50,6 +50,7 @@ export const processImage = async (req, res) => {
             shrimpCount: count,
             biomass: calculatedBiomassGrams,
             feedMeasurement: recommendedFeedGrams
+            
         });
         const savedRecord = await biomassRecord.save();
 

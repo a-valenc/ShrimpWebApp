@@ -17,3 +17,16 @@ export const getLatestBiomassRecord = async (req, res) => {
         res.status(500).json({ message: 'Error fetching latest biomass record' });
     }
 };
+
+export const deleteBiomassRecord = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const deletedRecord = await BiomassRecord.findByIdAndDelete(id);
+        if (!deletedRecord) {
+            return res.status(404).json({ message: 'Biomass record not found' });
+        }
+        res.json({ message: 'Biomass record deleted successfully' });
+    } catch (error) {
+        res.status(500).json({ message: 'Error deleting biomass record' });
+    }
+};
