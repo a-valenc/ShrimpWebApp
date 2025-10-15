@@ -18,9 +18,16 @@ export const getBiomassRecords = async (req, res) => {
 
 export const getLatestBiomassRecord = async (req, res) => {
     try {
-        const latest = await BiomassRecord.find().sort({ dateTime: -1 }).limit(1);
+        const { ownerId } = req.query;
+        let query = {};
+
+        if (ownerId) {
+            query.ownerId = ownerId;
+        }
+
+        const latest = await BiomassRecord.find(query).sort({ dateTime: -1 }).limit(1);
         res.json(latest[0] || {});
     } catch (error) {
-        res.status(500).json({ message: 'Error fetching latest biomass record' });
+        res.status(500).json({ message: 'Error fetching latest biomass record', error: error.message });
     }
 };
