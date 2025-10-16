@@ -11,6 +11,7 @@ import DashboardResults from './pages/DashboardResults';
 import DashboardHistory from './pages/DashboardHistory';
 import DashboardSettings from './pages/DashboardSettings';
 import './App.css';
+import Dashboard_upload from './pages/Dashboard copy';
 
 function App() {
   // Simple authentication state management

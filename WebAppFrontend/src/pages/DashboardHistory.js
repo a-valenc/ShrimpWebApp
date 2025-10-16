@@ -111,26 +111,7 @@ export default function DashboardHistory() {
 
                 {item._open && (
                   <div className="px-6 pb-6">
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-                      {/* Image Container */}
-                      <div className="bg-white/5 rounded-lg p-4">
-                        <div className="aspect-video bg-gray-50 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center relative">
-                          <img
-                            src="/shrimp-logo.gif"
-                            alt="Processed analysis result"
-                            className="max-w-full max-h-full object-contain rounded-lg"
-                          />
-                          <div className="absolute bottom-2 right-2 bg-black/80 text-white px-2 py-1 rounded text-xs font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                            1020 x 235
-                          </div>
-                        </div>
-                        <div className="mt-2 text-center">
-                          <p className="text-white/80 text-sm font-medium drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-                            This container will display the processed image (It automatically scales on the size of the output picture).
-                          </p>
-                        </div>
-                      </div>
-
+                    <div className="grid grid-cols-1 lg:grid-cols-1 gap-6 mb-6">
                       {/* Analysis Metrics */}
                       <div className="space-y-4">
                         <div className="grid grid-cols-1 gap-3">
@@ -176,10 +157,23 @@ export default function DashboardHistory() {
                         View Details
                       </button>
                       <button
-                        onClick={() => {
-                          const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]").filter(x=>x.id!==item.id);
-                          localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
-                          setItems(all);
+                        onClick={async () => {
+                          try {
+                            const res = await fetch(`http://localhost:5000/api/biomass-records/${item.id}`, {
+                              method: 'DELETE',
+                            });
+                            if (!res.ok) throw new Error('Failed to delete record');
+
+                            // Delete from local storage as well
+                            const all = JSON.parse(localStorage.getItem(STORAGE_KEY) || "[]").filter(x=>x.id!==item.id);
+                            localStorage.setItem(STORAGE_KEY, JSON.stringify(all));
+
+                            setItems(prev => prev.filter(x => x.id !== item.id));
+                            window.dispatchEvent(new Event('localStorageUpdated')); // Notify other components
+                          } catch (error) {
+                            console.error('Error deleting record:', error);
+                            alert('Failed to delete record. Please try again.');
+                          }
                         }}
                         className="px-4 py-2 border border-white/30 text-white rounded-lg hover:bg-white/10 transition-colors font-semibold shadow-lg"
                       >
